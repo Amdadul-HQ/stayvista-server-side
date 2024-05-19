@@ -83,9 +83,28 @@ async function run() {
 
     // Get All room
     app.get('/rooms',async(req,res)=> {
-      const result = await roomCollection.find().toArray()
+      const category = req.query.category
+      let query = {}
+      if(category && category !== 'null'){
+        query = { category }
+      }
+      const result = await roomCollection.find(query).toArray()
       res.send(result)
     })
+
+
+    // Get single Room by id
+    app.get('/room/:id',async(req,res)=> {
+      const id = req.params.id
+      const query ={
+        _id : new ObjectId(id)
+      }
+      const result = await roomCollection.findOne(query)
+      res.send(result)
+    })
+
+    // Get Category Room by label
+    // app.get('/')
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })

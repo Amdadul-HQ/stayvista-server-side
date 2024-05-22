@@ -50,6 +50,7 @@ async function run() {
   try {
     // Database
     const roomCollection = client.db('stayvista').collection('rooms')
+    const usersCollection = client.db('stayvista').collection('users')
 
     // auth related api
     app.post('/jwt', async (req, res) => {
@@ -81,6 +82,40 @@ async function run() {
       }
     })
 
+    // Save User Data in DB
+    app.put('/user',async(req,res)=>{
+      const user = req.body;
+      const option = { upsert : true }
+      const query = {
+        email: user?.email
+      }
+      const updateDoc = {
+        $set:{
+          ...user,
+          timestamp: Date.now(),
+        }
+      }
+
+      // Checking isExeist 
+      const isExist = await usersCollection.findOne({email:user?.email})
+      // if(isExist)return res.send(isExist)
+      if(isExist){
+        if(user.status === 'Requested'){
+          const result = await usersCollection.updateOne(query,{
+            $set:{status:user?.status},
+          })
+          return res.send(result)
+        }
+        else{
+          res.send(isExist)
+        }
+      }
+     
+      
+      const result = await usersCollection.updateOne(query,updateDoc,option)
+      res.send(result)
+    })
+
     // Get All room
     app.get('/rooms',async(req,res)=> {
       const category = req.query.category
@@ -92,6 +127,22 @@ async function run() {
       res.send(result)
     })
 
+    // Save Room in DB
+    app.post('/room',async(req,res)=> {
+      const roomData = req.body;
+      const result = await roomCollection.insertOne(roomData)
+      res.send(result)
+    })
+
+    // Get my listings 
+    app.get('/my-listings/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        'host.email':email
+      }
+      const result = await roomCollection.find(query).toArray()
+      res.send(result)
+    })
 
     // Get single Room by id
     app.get('/room/:id',async(req,res)=> {
@@ -103,8 +154,16 @@ async function run() {
       res.send(result)
     })
 
-    // Get Category Room by label
-    // app.get('/')
+    // Delete Single Room Data by id
+    app.delete('/room/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {
+        _id :new ObjectId(id)
+      }
+      const result = await roomCollection.deleteOne(query)
+      res.send(result)
+    })
+
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })

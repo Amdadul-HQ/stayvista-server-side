@@ -66,6 +66,33 @@ async function run() {
         })
         .send({ success: true })
     })
+
+    // verify Admin
+    const verifyAdmin = async(req,res,next)=>{
+      const user = req.user
+      const query = {
+        email:user?.email
+      }
+      const result = await usersCollection.findOne(query)
+      if(!result || result.role !== 'admin'){
+        return res.status(401).send({ message: 'unauthorized access!!' })
+      }
+      next()
+    } 
+    const verifyHost = async(req,res,next) => {
+      const user = req.user
+      const query = {
+        email : user?.email
+      }
+      const result = await usersCollection.findOne(query)
+      if(!result || result.role !== 'host'){
+        return res.status(401).send({ message: 'unauthorized access!!' })
+      }
+      next()
+    }
+
+
+
     // Logout
     app.get('/logout', async (req, res) => {
       try {
@@ -89,13 +116,7 @@ async function run() {
       const query = {
         email: user?.email
       }
-      const updateDoc = {
-        $set:{
-          ...user,
-          timestamp: Date.now(),
-        }
-      }
-
+      
       // Checking isExeist 
       const isExist = await usersCollection.findOne({email:user?.email})
       // if(isExist)return res.send(isExist)
@@ -107,10 +128,15 @@ async function run() {
           return res.send(result)
         }
         else{
-          res.send(isExist)
+         return res.send(isExist)
         }
       }
-     
+      const updateDoc = {
+        $set:{
+          ...user,
+          timestamp: Date.now(),
+        }
+      }
       
       const result = await usersCollection.updateOne(query,updateDoc,option)
       res.send(result)
@@ -161,6 +187,39 @@ async function run() {
         _id :new ObjectId(id)
       }
       const result = await roomCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // get user role 
+    app.get('/user/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = {
+        email: email
+      }
+      const user = await usersCollection.findOne(query)
+      const role = user.role;
+      res.send(role)
+    })
+    // get all the users
+    app.get('/users',async(req,res)=>{
+      const result = await usersCollection.find().toArray()
+      res.send(result)
+    })
+
+    // Update user
+    app.patch('/users/update/:email',async(req,res)=> {
+      const email = req.params.email;
+      const user = req.body;
+      const query = {
+        email:email
+      }
+      const updateUser = {
+        $set:{
+          ...user,
+          timestamp: Date.now()
+        }
+      }
+      const result = await usersCollection.updateOne(query,updateUser)
       res.send(result)
     })
 
